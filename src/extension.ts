@@ -1,7 +1,9 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
+import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 const PNG = require('png-js');
+const fs = require('fs');
 
 
 type Binary<N extends number = number> = string & {
@@ -25,42 +27,103 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let decodePixels = function(pixels:number[], start:number, length:number) {
 		let str = "";
-		let count = 0;
-		let i = start-1;
-		while(count < length) {
-			i += 1;
-			if(i%4===3) { continue;}
-			str += pixels[i]%2;
-			count += 1;
+		for(let i = start; i < start+length; i++) {
+			for(let j = 0; j < 3; j++) {
+				str += pixels[i*4+j]%2; //4 channels: rgba
+			}
+			//str += "\n";
 		}
+		logger.appendLine(str);
 		return str;
 	};
 
+	function asDecimal (bStr: Binary): number {
+		return parseInt(bStr, 2);
+	}	  
+
 	let decodePNG = function(pixels:number[]) {
-		const N = 3; //the first 3 pixel values will be decoded
-		const CHECK = "010100101";
-		const C = 4; // number of channels (r,g,b,a)
-		let binStr = decodePixels(pixels, 0,9);
+		const CHECK = "01010110" + "0";
+		//const CHECK = "0101101110" + "01";
+		let binStr = decodePixels(pixels, 0,3);
 		if(binStr !== CHECK) {
 			logger.appendLine("Check at beginning of file failed. There is no information encoded.");
 			logger.appendLine("Got check bits: " + binStr);
-			return;
+			return "";
 		}
 		logger.appendLine("Found encoded information! Decoding...");
 
-		vscode.window.showInformationMessage("#pixels: " + pixels.length);
+		let result = [];
+		let loc = 1;
+		while(true) {
+			let binStr = decodePixels(pixels, loc*3, 3);
+			logger.appendLine(""+binStr);
+			let binInt = binStr.substring(0,8);
+			result.push(parseInt(binInt,2));
+			if(binStr.charAt(8)==='1') {
+				break;
+			}
+			loc += 1;
+		}
+
+		let decoded = new TextDecoder().decode(new Uint8Array(result));
+		logger.appendLine(decoded);
+		return decoded;
 	};
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disp1 = vscode.commands.registerCommand("steganologger.decodeInfoInImage", (uri: vscode.Uri) => {
+	let disp1 = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
+		let path = uri.fsPath;
+		logger.appendLine("Decoding from URI: " + uri.toString());
+		let imguri = vscode.Uri.parse("stegano:"+path);
+		let doc = await vscode.workspace.openTextDocument(imguri); // callback to document provider
+		await vscode.window.showTextDocument(doc, { preview: false});
+	});
+	context.subscriptions.push(disp1);
+
+	let disp2 = vscode.commands.registerCommand("steganologger.decodeImage", (uri: vscode.Uri) => {
 		let path = uri.fsPath;
 		console.log(uri.toString());
-		PNG.decode(path, decodePNG);
+		let decoded = "";
+		logger.appendLine("command");
+		let png = PNG.load(path);
+		let pixels2 = png.decodePixels((pixels:number[]) => {
+			logger.appendLine("something "+pixels);
+			return pixels;
+		});
+		logger.appendLine(pixels2);
+		PNG.decode(path, (pixels:number[]) => {
+			decoded = decodePNG(pixels);
+			logger.appendLine("Decoded: " + decoded);
+		});
+		logger.appendLine("Got now: " + decoded);
+		return decoded;
 	});
+	context.subscriptions.push(disp2);
 
-	context.subscriptions.push(disp1);
+	const myProvider = new (class implements vscode.TextDocumentContentProvider {
+		provideTextDocumentContent(uri: vscode.Uri): string | Thenable<string> {
+			logger.appendLine("Provider");
+			/*return vscode.commands.executeCommand<string>("steganologger.decodeImage", uri).then(decoded => {
+				logger.appendLine("Yes: " + decoded);
+				return decoded;
+			});*/
+			let myPromise = new Promise<string>((resolve, reject) => {
+				let path = uri.fsPath;
+				console.log(uri.toString());
+				let decoded = "";
+				PNG.decode(path, (pixels:number[]) => {
+					decoded = decodePNG(pixels);
+					logger.appendLine("Decoded: " + decoded);
+					let str = JSON.stringify(JSON.parse(decoded),undefined,2);
+					resolve(str);
+				});
+			});
+			return myPromise;
+		}
+	})();
+	vscode.workspace.registerTextDocumentContentProvider("stegano", myProvider);
 
 	vscode.commands.executeCommand('setContext', 'stenagologger.supportedExtensions', ['.png', '.svg']);
 }

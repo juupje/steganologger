@@ -13,15 +13,21 @@
   "contributes": {
     "commands": [
       {
-        "command": "steganologger.decodeInfoInImage",
-        "title": "Decode Image"
+        "command": "steganologger.decodeImage",
+        "when": "false",
+        "title": "Decode image"
+      },
+      {
+        "command": "steganologger.showInfo",
+        "title": "Decode image",
+        "when": "false"
       }
     ],
     "menus": {
       "explorer/context": [
         {
           "when": "resourceExtname == .png || resourceExtname == .svg",
-          "command": "steganologger.decodeInfoInImage"
+          "command": "steganologger.showInfo"
         }
       ]
     }
