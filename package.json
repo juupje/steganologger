@@ -4,12 +4,20 @@
   "description": "An extension to decode information encoded in plots using the steganologger python script",
   "icon": "media/steganologger-icon.png",
   "version": "0.0.1",
+  "repository": "https://github.com/juupje/steganologger",
+  "publisher": "juupje",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "Steganography",
+    "Plot logging"
+  ],
+  "preview": true,
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -28,7 +36,7 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "resourceExtname == .png || resourceExtname == .svg",
+          "when": "resourceExtname == .png",
           "command": "steganologger.showInfo"
         }
       ]
@@ -74,7 +82,6 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "json-stringify-pretty-compact": "^4.0.0",
     "png-js": "^1.0.0"
   }
 }
