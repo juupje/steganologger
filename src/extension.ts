@@ -41,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if(binStr !== CHECK) {
 			logger.appendLine("Check at beginning of file failed. There is no information encoded.");
 			logger.appendLine("Got check bits: " + binStr);
+			vscode.window.showInformationMessage("There is no information encoded in this image (check key failed).");
 			return "";
 		}
 		logger.appendLine("Found encoded information! Decoding...");
@@ -75,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(disp1);
 
-	vscode.commands.executeCommand('setContext', 'stenagologger.supportedExtensions', ['.png', '.svg']);
+	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png']);
 
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider(SteganologgerViewProvider.viewType, provider));
 }

@@ -36,7 +36,7 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "resourceExtname == .png",
+          "when": "resourceExtname in steganologger.supportedExtensions",
           "command": "steganologger.showInfo"
         }
       ]
