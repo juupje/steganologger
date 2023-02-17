@@ -1,7 +1,8 @@
 {
   "name": "steganologger",
-  "displayName": "steganologger",
-  "description": "",
+  "displayName": "Steganologger",
+  "description": "An extension to decode information encoded in plots using the steganologger python script",
+  "icon": "media/steganologger-icon.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.75.0"
@@ -15,7 +16,8 @@
       {
         "command": "steganologger.decodeImage",
         "when": "false",
-        "title": "Decode image"
+        "title": "Decode image",
+        "test": false
       },
       {
         "command": "steganologger.showInfo",
@@ -28,6 +30,24 @@
         {
           "when": "resourceExtname == .png || resourceExtname == .svg",
           "command": "steganologger.showInfo"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "steganologger-container",
+          "title": "Steganologger",
+          "icon": "media/steganologger-icon.png"
+        }
+      ]
+    },
+    "views": {
+      "steganologger-container": [
+        {
+          "type": "webview",
+          "id": "steganologger.webview",
+          "name": "Decoded"
         }
       ]
     }
@@ -54,6 +74,7 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
+    "json-stringify-pretty-compact": "^4.0.0",
     "png-js": "^1.0.0"
   }
 }

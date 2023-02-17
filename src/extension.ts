@@ -23,7 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	let logger = vscode.window.createOutputChannel("Steganologger");
-	logger.appendLine('Congratulations, your extension "steganologger" is now active!');
 
 	let decodePixels = function(pixels:number[], start:number, length:number) {
 		let str = "";
@@ -31,15 +30,9 @@ export function activate(context: vscode.ExtensionContext) {
 			for(let j = 0; j < 3; j++) {
 				str += pixels[i*4+j]%2; //4 channels: rgba
 			}
-			//str += "\n";
 		}
-		logger.appendLine(str);
 		return str;
 	};
-
-	function asDecimal (bStr: Binary): number {
-		return parseInt(bStr, 2);
-	}	  
 
 	let decodePNG = function(pixels:number[]) {
 		const CHECK = "01010110" + "0";
@@ -56,7 +49,6 @@ export function activate(context: vscode.ExtensionContext) {
 		let loc = 1;
 		while(true) {
 			let binStr = decodePixels(pixels, loc*3, 3);
-			logger.appendLine(""+binStr);
 			let binInt = binStr.substring(0,8);
 			result.push(parseInt(binInt,2));
 			if(binStr.charAt(8)==='1') {
@@ -66,67 +58,91 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		let decoded = new TextDecoder().decode(new Uint8Array(result));
-		logger.appendLine(decoded);
 		return decoded;
 	};
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
+	const provider = new SteganologgerViewProvider(context.extensionUri, logger, context);
+
 	let disp1 = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
 		let path = uri.fsPath;
 		logger.appendLine("Decoding from URI: " + uri.toString());
-		let imguri = vscode.Uri.parse("stegano:"+path);
-		let doc = await vscode.workspace.openTextDocument(imguri); // callback to document provider
-		await vscode.window.showTextDocument(doc, { preview: false});
+		PNG.decode(path, (pixels:number[]) => {
+			let decoded = decodePNG(pixels);
+			logger.appendLine("Decoded: " + decoded);
+			let json = JSON.parse(decoded);
+			provider.setJSON(json);
+		});
 	});
 	context.subscriptions.push(disp1);
 
-	let disp2 = vscode.commands.registerCommand("steganologger.decodeImage", (uri: vscode.Uri) => {
-		let path = uri.fsPath;
-		console.log(uri.toString());
-		let decoded = "";
-		logger.appendLine("command");
-		let png = PNG.load(path);
-		let pixels2 = png.decodePixels((pixels:number[]) => {
-			logger.appendLine("something "+pixels);
-			return pixels;
-		});
-		logger.appendLine(pixels2);
-		PNG.decode(path, (pixels:number[]) => {
-			decoded = decodePNG(pixels);
-			logger.appendLine("Decoded: " + decoded);
-		});
-		logger.appendLine("Got now: " + decoded);
-		return decoded;
-	});
-	context.subscriptions.push(disp2);
-
-	const myProvider = new (class implements vscode.TextDocumentContentProvider {
-		provideTextDocumentContent(uri: vscode.Uri): string | Thenable<string> {
-			logger.appendLine("Provider");
-			/*return vscode.commands.executeCommand<string>("steganologger.decodeImage", uri).then(decoded => {
-				logger.appendLine("Yes: " + decoded);
-				return decoded;
-			});*/
-			let myPromise = new Promise<string>((resolve, reject) => {
-				let path = uri.fsPath;
-				console.log(uri.toString());
-				let decoded = "";
-				PNG.decode(path, (pixels:number[]) => {
-					decoded = decodePNG(pixels);
-					logger.appendLine("Decoded: " + decoded);
-					let str = JSON.stringify(JSON.parse(decoded),undefined,2);
-					resolve(str);
-				});
-			});
-			return myPromise;
-		}
-	})();
-	vscode.workspace.registerTextDocumentContentProvider("stegano", myProvider);
-
 	vscode.commands.executeCommand('setContext', 'stenagologger.supportedExtensions', ['.png', '.svg']);
+
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider(SteganologgerViewProvider.viewType, provider));
 }
 
 // This method is called when your extension is deactivated
 export function deactivate() {}
+
+class SteganologgerViewProvider implements vscode.WebviewViewProvider {
+	public static readonly viewType = 'steganologger.webview';
+
+	private _view?: vscode.WebviewView;
+
+	constructor(
+		private readonly _extensionUri:vscode.Uri,
+		private readonly _logger:vscode.OutputChannel,
+		private readonly _context:vscode.ExtensionContext
+	) {
+		this._logger.appendLine("constructing webview");
+	}
+
+	public resolveWebviewView(webviewView: vscode.WebviewView, context: vscode.WebviewViewResolveContext<unknown>,
+		token: vscode.CancellationToken): void | Thenable<void> {
+		this._logger.appendLine("Resolving webview");
+		this._view = webviewView;
+		webviewView.webview.options = {
+			enableScripts: true,
+			localResourceRoots: [this._extensionUri]
+		};
+		webviewView.webview.html = this._getHTMLForWebview(webviewView.webview);
+	}
+
+	public setJSON(json:JSON) {
+		if(this._view) {
+			this._view.show?.(true);
+			this._view.webview.postMessage({type: 'setJSON', json: json});
+		}
+	}
+
+	private _getHTMLForWebview(webview: vscode.Webview) {
+		
+		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css'));
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'script.js'));
+		let str = "Nothing here yet.";
+		const nonce = getNonce();
+		return `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset='UTF-8'>
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<link href="${styleUri}" rel="stylesheet">
+				<title>Steganologger</title>
+			</head>
+			
+			<body>
+			<pre id='json'>${str}</pre>
+			<script nonce="${nonce}" src="${scriptUri}"></script>
+			</body>
+			</html>`;
+	}
+}
+
+function getNonce() {
+	let text = '';
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	for (let i = 0; i < 32; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
+}

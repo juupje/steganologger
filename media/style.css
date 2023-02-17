@@ -1,0 +1,10 @@
+pre {
+    outline: 1px solid var(--vscode-input-border);
+    padding: 5px;
+    margin: 5px;
+}
+.string { color: rgb(253, 123, 1); }
+.number { color: rgb(159, 203, 0); }
+.boolean { color: rgb(94, 94, 255); }
+.null { color: rgb(112, 0, 127); }
+.key { color: rgb(0, 255, 251); }
