@@ -8,3 +8,71 @@ pre {
 .boolean { color: rgb(94, 94, 255); }
 .null { color: rgb(112, 0, 127); }
 .key { color: rgb(0, 255, 251); }
+
+#tabcontainer {
+    display: flex;
+    flex-wrap: wrap;
+    height: 100%;
+    width: 100%;
+}
+.tabs {
+    border-top: 1px solid #888888;
+}
+.tabs label {
+    order: 1;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    margin-right: 0.2rem;
+    cursor: pointer;
+    padding-right: 1em;
+    color: #929292;
+}
+
+.tabcontent {
+    background-color: #494949;
+}
+
+.tabs .tab {
+    order: 9;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    display: none;
+    padding: 1rem;
+    padding: 2px;
+}
+
+.tabs input[type="radio"] {
+    display: none;
+}
+
+.tabs input[type="radio"]:checked + label {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.tabs input[type="radio"]:checked + label + .tab {
+    display: block;
+}
+
+@media (max-width: 465px) {
+    .tabs .tab, .tabs label {
+        order: initial;
+    }
+    .tabs label {
+        width: 100%;
+        margin-left: 50px;
+    }
+}
+
+body {
+    line-height: 1.5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+html {
+    height:100%;
+}

@@ -71,7 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
 			let decoded = decodePNG(pixels);
 			logger.appendLine("Decoded: " + decoded);
 			let json = JSON.parse(decoded);
-			provider.setJSON(json);
+			provider.addJSON(json, path);
 		});
 	});
 	context.subscriptions.push(disp1);
@@ -108,10 +108,10 @@ class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 		webviewView.webview.html = this._getHTMLForWebview(webviewView.webview);
 	}
 
-	public setJSON(json:JSON) {
+	public addJSON(json:JSON, name:string) {
 		if(this._view) {
 			this._view.show?.(true);
-			this._view.webview.postMessage({type: 'setJSON', json: json});
+			this._view.webview.postMessage({type: 'addJSON', json: json, name: name});
 		}
 	}
 
@@ -119,7 +119,6 @@ class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 		
 		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css'));
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'script.js'));
-		let str = "Nothing here yet.";
 		const nonce = getNonce();
 		return `<!DOCTYPE html>
 			<html lang="en">
@@ -132,7 +131,9 @@ class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 			</head>
 			
 			<body>
-			<pre id='json'>${str}</pre>
+			<div class="tabs" id="tabcontainer">
+				<pre id='json'>Nothing here yet :(</pre>
+			</div>
 			<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;
