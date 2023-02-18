@@ -26,11 +26,11 @@ pre {
     margin-right: 0.2rem;
     cursor: pointer;
     padding-right: 1em;
-    color: #929292;
+    color:var(--vscode-tab-inactiveForeground);
 }
 
 .tabcontent {
-    background-color: #494949;
+    background-color: var(--vscode-sideBar-background);
 }
 
 .tabs .tab {
@@ -48,7 +48,7 @@ pre {
 }
 
 .tabs input[type="radio"]:checked + label {
-    color: #fff;
+    color: var(--vscode-panelTitle-activeForeground);
     text-decoration: underline;
 }
 

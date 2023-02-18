@@ -2,6 +2,7 @@ import { provideVSCodeDesignSystem, vsCodeButton } from "@vscode/webview-ui-tool
 
 provideVSCodeDesignSystem().register(vsCodeButton());
 
+declare var acquireVsCodeApi: any;
 
 const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
 (function() {
@@ -25,7 +26,10 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
         if(idx > 0) {
           //Already in the list
           current = "tabs"+idx;
-          document.getElementById("tabs"+idx).checked=true;
+          let element = document.getElementById("tabs"+idx) as HTMLInputElement;
+          if(element !== null) {
+            element.checked = true;
+          }
           updateState();
         } else {
           current = "tabs" + counter; //this will be selected by addJSON()
@@ -39,7 +43,7 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
     }
   });
 
-  function addJSON(json, name) {
+  function addJSON(json:string|{[key:string]:any}, name:string) {
     if(counter==1) {
       clear();
     }
@@ -59,17 +63,17 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
     let label = document.createElement("label");
     label.htmlFor = "tab"+counter;
     label.innerHTML = name.substring(name.lastIndexOf("/")+1);
-    let div = document.createElement("div");
-    div.classList = "tab tabcontent";
+    let div = document.createElement("div") as HTMLDivElement;
+    div.classList.add("tab", "tabcontent");
     div.innerHTML = "<pre class='json'>File: "+ name + "<br/>" + str + "</pre>";
     let tabs = document.getElementById("tabcontainer");
-    tabs.appendChild(input);
-    tabs.appendChild(label);
-    tabs.appendChild(div);
+    tabs?.appendChild(input);
+    tabs?.appendChild(label);
+    tabs?.appendChild(div);
     counter += 1;
   }
 
-  function checkIfAlreadyAdded(name) {
+  function checkIfAlreadyAdded(name:string) {
     for(let i = 0; i < names.length; i++) {
       if(names[i]===name){
         return i;
@@ -79,7 +83,8 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
   }
 
   function onTabClick() {
-    current = document.querySelector('input[name="tabs"]:checked').value;
+    let element = document.querySelector('input[name="tabs"]:checked') as HTMLInputElement;
+    current = element.value;
     updateState();
   }
 
@@ -88,13 +93,13 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
   }
 
   function clear() {
-    let tabs = document.getElementById("tabcontainer");
+    let tabs = document.getElementById("tabcontainer") as HTMLDivElement;
     tabs.innerHTML = "";
   }
   
-  function syntaxHighlight(json) {
+  function syntaxHighlight(json:string) {
     json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    highlighted = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+    let highlighted = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
       var cls = 'number';
       if (/^"/.test(match)) {
         if (/:$/.test(match)) {
@@ -118,7 +123,7 @@ The code below is taken from the json-stringify-pretty-compact package.
 See https://www.npmjs.com/package/json-stringify-pretty-compact
 */
 
-function stringify(passedObj, options = {}) {
+function stringify(passedObj:{}, options:any = {}) {
   const indent = JSON.stringify(
     [1],
     undefined,
@@ -134,7 +139,7 @@ function stringify(passedObj, options = {}) {
 
   let { replacer } = options;
 
-  return (function _stringify(obj, currentIndent, reserved) {
+  return (function _stringify(obj:any, currentIndent, reserved):string {
     if (obj && typeof obj.toJSON === "function") {
       obj = obj.toJSON();
     }
