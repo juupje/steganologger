@@ -22,15 +22,19 @@
   "contributes": {
     "commands": [
       {
-        "command": "steganologger.decodeImage",
-        "when": "false",
-        "title": "Decode image",
-        "test": false
-      },
-      {
         "command": "steganologger.showInfo",
         "title": "Decode image",
         "when": "false"
+      },
+      {
+        "command": "steganologger.clear",
+        "title": "Steganologger: Clear tabs",
+        "icon": "$(notebook-clear)"
+      },
+      {
+        "command": "steganologger.removeTab",
+        "title": "Steganologger: Remove current tab",
+        "icon": "$(notebook-delete-cell)"
       }
     ],
     "menus": {
@@ -38,6 +42,18 @@
         {
           "when": "resourceExtname in steganologger.supportedExtensions",
           "command": "steganologger.showInfo"
+        }
+      ],
+      "view/title": [
+        {
+          "when": "view == steganologger.webview",
+          "command": "steganologger.clear",
+          "group": "navigation"
+        },
+        {
+          "when": "view == steganologger.webview",
+          "command": "steganologger.removeTab",
+          "group": "navigation"
         }
       ]
     },

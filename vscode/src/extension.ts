@@ -4,7 +4,8 @@ import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 const PNG = require('png-js');
 const fs = require('fs');
-import { SteganologgerViewProvider } from './panels/StenagologgerPanel';
+import { SteganologgerViewProvider } from './panels/StenagologgerViewProvider';
+import { PNGDecoder } from './utils/decoder';
 
 type Binary<N extends number = number> = string & {
 	readonly binaryStringLength: unique symbol;
@@ -19,57 +20,24 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	let logger = vscode.window.createOutputChannel("Steganologger");
 
-	let decodePixels = function(pixels:number[], start:number, length:number) {
-		let str = "";
-		for(let i = start; i < start+length; i++) {
-			for(let j = 0; j < 3; j++) {
-				str += pixels[i*4+j]%2; //4 channels: rgba
-			}
-		}
-		return str;
-	};
-
-	let decodePNG = function(pixels:number[]) {
-		const CHECK = "01010110" + "0";
-		//const CHECK = "0101101110" + "01";
-		let binStr = decodePixels(pixels, 0,3);
-		if(binStr !== CHECK) {
-			logger.appendLine("Check at beginning of file failed. There is no information encoded.");
-			logger.appendLine("Got check bits: " + binStr);
-			vscode.window.showInformationMessage("There is no information encoded in this image (check key failed).");
-			return "";
-		}
-		logger.appendLine("Found encoded information! Decoding...");
-
-		let result = [];
-		let loc = 1;
-		while(true) {
-			let binStr = decodePixels(pixels, loc*3, 3);
-			let binInt = binStr.substring(0,8);
-			result.push(parseInt(binInt,2));
-			if(binStr.charAt(8)==='1') {
-				break;
-			}
-			loc += 1;
-		}
-
-		let decoded = new TextDecoder().decode(new Uint8Array(result));
-		return decoded;
-	};
-
+	const decoder = new PNGDecoder(logger);
 	const provider = new SteganologgerViewProvider(context.extensionUri, logger, context);
 
-	let disp1 = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
+	let showInfoCommand = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
 		let path = uri.fsPath;
 		logger.appendLine("Decoding from URI: " + uri.toString());
 		PNG.decode(path, (pixels:number[]) => {
-			let decoded = decodePNG(pixels);
+			let decoded = decoder.decodePNG(pixels);
 			logger.appendLine("Decoded: " + decoded);
 			let json = JSON.parse(decoded);
 			provider.addJSON(json, path);
 		});
 	});
-	context.subscriptions.push(disp1);
+
+	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.clear());
+	let removeTabCommand = vscode.commands.registerCommand("steganologger.removeTab", async () => provider.removeTab());
+
+	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand);
 
 	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png']);
 

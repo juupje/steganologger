@@ -31,6 +31,20 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
+	public clear() {
+		if(this._view) {
+			this._view.show?.(true);
+			this._view.webview.postMessage({type: "clear"});
+		}
+	}
+
+	public removeTab() {
+		if(this._view) {
+			this._view.show?.(true);
+			this._view.webview.postMessage({type: "removeTab"});
+		}
+	}
+
 	private _getHTMLForWebview(webview: vscode.Webview) {
 		
 		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css'));
@@ -45,11 +59,10 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 				<link href="${styleUri}" rel="stylesheet">
 				<title>Steganologger</title>
 			</head>
-			
 			<body>
-			<div class="tabs" id="tabcontainer">
-				<pre id='json'>Nothing here yet :(</pre>
-			</div>
+				<div class="tabs" id="tabcontainer">
+					<pre id='json'>Nothing here yet.</pre>
+				</div>
 			<script nonce="${nonce}" type="module" src="${scriptUri}"></script>
 			</body>
 			</html>`;

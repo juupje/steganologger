@@ -46,7 +46,7 @@ def _encode_img(newimg, data):
             x += 1
     print(f"Encoded {(count//3)} bytes in {count} pixels ({count/(newimg.size[0]*newimg.size[1])*100:.2f}% of image)")
 
-def encode(image_path:str, data:dict, overwrite:bool=False, to_file:str=None) -> bool:
+def encode(image_path:str, data:dict|str, overwrite:bool=False, to_file:str=None) -> bool:
     """
     Parameters
     ----------
