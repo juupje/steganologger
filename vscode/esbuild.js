@@ -35,6 +35,14 @@ const webviewConfig = {
     outfile: "./out/webview.js",
 };
 
+const webviewCompareConfig = {
+    ...baseConfig,
+    target: "es2020",
+    format: "esm",
+    entryPoints: ["./src/webview/compare.ts"],
+    outfile: "./out/webview-compare.js",
+};
+
 (async () => {
     const args = process.argv.slice(2);
     try {
@@ -48,6 +56,7 @@ const webviewConfig = {
         } else {
             await build(extensionConfig);
             await build(webviewConfig);
+            await build(webviewCompareConfig);
             console.log("build complete");
         }
     } catch(err) {

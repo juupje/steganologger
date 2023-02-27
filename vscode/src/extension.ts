@@ -24,6 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
 	const provider = new SteganologgerViewProvider(context.extensionUri, logger, context);
 
 	let showInfoCommand = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
+		try {
+			await vscode.workspace.fs.stat(uri); //all is fine
+		} catch {
+			vscode.window.showErrorMessage(`'${uri.toString(true)}': file does *not* exist`);
+			return;
+		}
 		let path = uri.fsPath;
 		logger.appendLine("Decoding from URI: " + uri.toString());
 		PNG.decode(path, (pixels:number[]) => {
@@ -34,10 +40,13 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	});
 
-	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.clear());
-	let removeTabCommand = vscode.commands.registerCommand("steganologger.removeTab", async () => provider.removeTab());
+	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.command("clear"));
+	let removeTabCommand = vscode.commands.registerCommand("steganologger.removeTab", async () => provider.command("removeTab"));
+	let compareCommand = vscode.commands.registerCommand("steganologger.toggleCompare", async() => provider.toggleCompare());
+	let refreshTabCommand = vscode.commands.registerCommand("steganologger.refreshTab", async() => provider.command("refreshTab"));
+	let refreshAllCommand = vscode.commands.registerCommand("steganologger.refreshAll", async() => provider.command("refreshAll"));
 
-	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand);
+	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand, compareCommand, refreshTabCommand, refreshAllCommand);
 
 	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png']);
 

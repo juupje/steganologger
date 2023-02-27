@@ -126,6 +126,8 @@ if __name__ == "__main__":
     parser.add_argument("--pretty", help="If decoding, output in pretty json", action="store_true")
 
     args = vars(parser.parse_args())
+    for s in ["data", "out_file", "file"]:
+        if(s in "args" and args[s].startsWith("~")): args[s] = os.path.expanduser(args[s])
     if(args["encode"]):
         if("out_file" not in args or not args["out_file"]):
             print("No output file given")

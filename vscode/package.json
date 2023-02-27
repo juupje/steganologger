@@ -23,8 +23,12 @@
     "commands": [
       {
         "command": "steganologger.showInfo",
-        "title": "Decode image",
-        "when": "false"
+        "title": "Steganologger: Decode image"
+      },
+      {
+        "command": "steganologger.toggleCompare",
+        "title": "Steganologger: Toggle compare mode",
+        "icon": "$(book)"
       },
       {
         "command": "steganologger.clear",
@@ -35,9 +39,28 @@
         "command": "steganologger.removeTab",
         "title": "Steganologger: Remove current tab",
         "icon": "$(notebook-delete-cell)"
+      },
+      {
+        "command": "steganologger.refreshAll",
+        "title": "Steganologger: Refresh all"
+      },
+      {
+        "command": "steganologger.refreshTab",
+        "title": "Steganologger: Refresh tab",
+        "icon": "$(search-refresh)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "steganologger.refreshTab",
+          "when": "false"
+        },
+        {
+          "command": "steganologger.showInfo",
+          "when": "false"
+        }
+      ],
       "explorer/context": [
         {
           "when": "resourceExtname in steganologger.supportedExtensions",
@@ -54,6 +77,21 @@
           "when": "view == steganologger.webview",
           "command": "steganologger.removeTab",
           "group": "navigation"
+        },
+        {
+          "when": "view == steganologger.webview",
+          "command": "steganologger.refreshTab",
+          "group": "navigation"
+        },
+        {
+          "when": "view == steganologger.webview",
+          "command": "steganologger.toggleCompare",
+          "group": "navigation"
+        },
+        {
+          "when": "view == steganologger.webview",
+          "command": "steganologger.refreshAll",
+          "group": "inline"
         }
       ]
     },

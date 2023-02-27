@@ -9,7 +9,7 @@ pre {
 .null { color: rgb(112, 0, 127); }
 .key { color: rgb(0, 255, 251); }
 
-#tabcontainer {
+.container {
     display: flex;
     flex-wrap: wrap;
     height: 100%;
@@ -75,4 +75,27 @@ body {
 
 html {
     height:100%;
+}
+
+/* STYLE FOR COMPARISON */
+#compare_table {
+    width:100%;
+    height:100%;
+    table-layout: fixed;
+    border-spacing: 5px;
+}
+
+#compare_table td {
+    background-color: var(--vscode-sideBar-background);
+    overflow-x: scroll;
+}
+
+#compare_table p {
+    margin: 0px 1em 0px 0px;
+    display: inline-block;
+    padding-top:3px;
+}
+
+.dropdown {
+    font-weight: normal;
 }

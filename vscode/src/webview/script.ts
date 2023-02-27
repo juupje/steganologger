@@ -1,81 +1,66 @@
-import { provideVSCodeDesignSystem, vsCodeButton } from "@vscode/webview-ui-toolkit";
-
-provideVSCodeDesignSystem().register(vsCodeButton());
-
-declare var acquireVsCodeApi: any;
-
-const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
+import { syntaxHighlight } from "./highlight";
 (function() {
   const vscode = acquireVsCodeApi();
-  const oldState = vscode.getState() || {jsons: [], names: [], current: null};
+  const oldState = vscode.getState() || {tabs: [] as any, current: null, left:0, right:1} as any;
   
-  var counter = 1;
-  var jsons = oldState.jsons;
-  var names = oldState.names;
+  var counter = 0;
+  var tabs = oldState.tabs;
   var current = oldState.current;
-  
-  for(var i = 0; i < jsons.length; i++) {
-    addJSON(jsons[i], names[i]);
+  var left = oldState.left; //these are not changed here
+  var right = oldState.right; //these are not changed here
+
+  for(var i = 0; i < tabs.length; i++) {
+    tabs[i].number = addJSON(tabs[i].json, tabs[i].name);
   }
+  updateState(); //to update the tab numbers
 
   window.addEventListener('message', event => {
     const message = event.data;
     switch(message.type) {
       case 'addJSON': {
         let idx = checkIfAlreadyAdded(message.name);
-        if(idx > 0) {
+        if(idx >= 0) {
           //Already in the list
-          current = "tabs"+idx;
-          let element = document.getElementById("tabs"+idx) as HTMLInputElement;
-          if(element !== null) {
-            element.checked = true;
-          }
+          current = tabs[idx].number;
+          let element = document.getElementById("tab"+current) as HTMLInputElement;
+          element.checked = true;
+          let div = document.getElementById("tabcontent"+tabs[idx].number) as HTMLDivElement;
+          div.innerHTML = "<pre class='json'>File: "+ message.name + "<br/>" + syntaxHighlight(message.json) + "</pre>";
+          tabs[idx].json = message.json
           updateState();
         } else {
-          current = "tabs" + counter; //this will be selected by addJSON()
-          addJSON(message.json, message.name);
-          jsons.push(message.json);
-          names.push(message.name);
+          let num = addJSON(message.json, message.name);
+          current = num;
+          tabs.push({json: message.json, name:message.name, number:num});
           updateState();
         }
         break;
       }
       case 'clear': {
-        names = [];
-        jsons = [];
+        tabs = [];
         current = null;
         updateState();
-        counter = 1;
-        let tabs = document.getElementById("tabcontainer") as HTMLDivElement;
-        tabs.innerHTML = "<pre id='json'>Nothing here yet.</pre>";
+        counter = 0;
+        let container = document.getElementById("tabcontainer") as HTMLDivElement;
+        container.innerHTML = "<pre id='json'>Nothing here yet.</pre>";
         break;
       }
       case 'removeTab': {
-        console.log("Current: " + current);
-        let currentLabel = document.getElementById("label" + current);
-        let name = currentLabel?.innerHTML;
-        let idx = 0;
-        for(; idx < names.length; idx++) {
-          if(names[idx].endsWith(name)) { break; }
+        let idx = getCurrentTabIndex();
+        if(idx == -1) {
+          console.log("Couldn't determine selected tab");
+          break;
         }
-        console.log("Removing name " + names[idx] + " at idx " + idx);
-        if(idx==0) {
-          names = names.slice(1);
-          jsons = jsons.slice(1);
-        } else if(idx==names.length-1) {
-          names = names.slice(0,-1);
-          jsons = jsons.slice(0,-1);
-        } else {
-          names = names.slice(0,idx).concat(names.slice(idx+1));
-          jsons = jsons.slice(0,idx).concat(jsons.slice(idx+1));
-        }
+        tabs = (idx == 0 ? tabs.slice(1) : 
+                (idx == tabs.length-1 ? tabs.slice(0,-1) : tabs.slice(0,idx).concat(tabs.slice(idx+1))));
+
         //Remove the input, label and content
         document.getElementById("tab"+current)?.remove()
         document.getElementById("label"+current)?.remove();
         document.getElementById("tabcontent"+current)?.remove();
-        if(names.length==0) {
-          let tabs = document.getElementById("tabcontainer") as HTMLDivElement;
-          tabs.innerHTML = "<pre id='json'>Nothing here yet.</pre>";
+        if(tabs.length==0) {
+          let container = document.getElementById("tabcontainer") as HTMLDivElement;
+          container.innerHTML = "<pre id='json'>Nothing here yet.</pre>";
           current = null;
         } else {
           let inputs = document.getElementsByClassName("tabinput");
@@ -90,16 +75,35 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
         }
         updateState();
         break;
-      } 
+      }
+      case 'refreshTab': {
+        let idx = getCurrentTabIndex();
+        if(idx == -1) {
+          console.log("Couldn't determine selected tab");
+          break;
+        }
+        vscode.postMessage({command: "refreshTab", file: tabs[idx].name});
+        break;
+      }
+      case 'refreshAll': {
+        let oldtabs = tabs;
+        tabs = [];
+        current = null;
+        updateState();
+        counter = 0;
+        clearPanel();
+        for(let i = 0; i < oldtabs.length; i++) {
+          vscode.postMessage({command: "refreshTab", file: oldtabs[i].name});
+        }
+        break;
+      }
     }
   });
 
-  function addJSON(json:string|{[key:string]:any}, name:string) {
+  function addJSON(json:string|{[key:string]:any}, name:string):number {
+    counter += 1;
     if(counter==1) {
       clearPanel();
-    }
-    if (typeof json !== 'string') {
-      json = stringify(json);
     }
     let str = syntaxHighlight(json);
     let input = document.createElement("input");
@@ -108,7 +112,7 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
     input.name = "tabs";
     input.id = "tab" + counter;
     input.value = ""+counter;
-    if(input.id === current) {
+    if(counter === current) {
       input.checked = true;
     }
     input.onclick = onTabClick;
@@ -125,148 +129,43 @@ const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
     tabs?.appendChild(label);
     tabs?.appendChild(div);
     console.log("Added tab" + counter);
-    counter += 1;
+    return counter
   }
 
-  function checkIfAlreadyAdded(name:string) {
-    for(let i = 0; i < names.length; i++) {
-      if(names[i]===name){
+  //Returns the index of the tabs array corresponding to this name, or -1 if it does not exist
+  function checkIfAlreadyAdded(name:string):number {
+    for(let i = 0; i < tabs.length; i++) {
+      if(tabs[i].name===name){
         return i;
       }
     }
     return -1;
   }
 
+  function tabNumberToIndex(tabNumber:number):number {
+    let idx = 0;
+    for(; idx < tabs.length; idx++) {
+      if(tabs[idx].number === tabNumber) { return idx; }
+    }
+    return -1;
+  }
+
+  function getCurrentTabIndex():number {
+    return tabNumberToIndex(current);
+  }
+
   function onTabClick() {
     let element = document.querySelector('input[name="tabs"]:checked') as HTMLInputElement;
-    current = element.value;
+    current = Number(element.value);
     updateState();
   }
 
   function updateState() {
-    vscode.setState({jsons:jsons, names:names, current: current});
+    vscode.setState({tabs:tabs, current: current, left:left, right:right});
   }
 
   function clearPanel() {
     let tabs = document.getElementById("tabcontainer") as HTMLDivElement;
     tabs.innerHTML = "";
   }
-  
-  function syntaxHighlight(json:string) {
-    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    let highlighted = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-      var cls = 'number';
-      if (/^"/.test(match)) {
-        if (/:$/.test(match)) {
-          cls = 'key';
-        } else {
-          cls = 'string';
-        }
-      } else if (/true|false/.test(match)) {
-        cls = 'boolean';
-      } else if (/null/.test(match)) {
-        cls = 'null';
-      }
-      return '<span class="' + cls + '">' + match + '</span>';
-    });
-    return highlighted.replaceAll("\n", "<br/>");
-  }
 }());
-
-/*
-The code below is taken from the json-stringify-pretty-compact package.
-See https://www.npmjs.com/package/json-stringify-pretty-compact
-*/
-
-function stringify(passedObj:{}, options:any = {}) {
-  const indent = JSON.stringify(
-    [1],
-    undefined,
-    options.indent === undefined ? 2 : options.indent
-  ).slice(2, -3);
-
-  const maxLength =
-    indent === ""
-      ? Infinity
-      : options.maxLength === undefined
-      ? 80
-      : options.maxLength;
-
-  let { replacer } = options;
-
-  return (function _stringify(obj:any, currentIndent, reserved):string {
-    if (obj && typeof obj.toJSON === "function") {
-      obj = obj.toJSON();
-    }
-
-    const string = JSON.stringify(obj, replacer);
-
-    if (string === undefined) {
-      return string;
-    }
-
-    const length = maxLength - currentIndent.length - reserved;
-
-    if (string.length <= length) {
-      const prettified = string.replace(
-        stringOrChar,
-        (match, stringLiteral) => {
-          return stringLiteral || `${match} `;
-        }
-      );
-      if (prettified.length <= length) {
-        return prettified;
-      }
-    }
-
-    if (replacer !== null) {
-      obj = JSON.parse(string);
-      replacer = undefined;
-    }
-
-    if (typeof obj === "object" && obj !== null) {
-      const nextIndent = currentIndent + indent;
-      const items = [];
-      let index = 0;
-      let start;
-      let end;
-
-      if (Array.isArray(obj)) {
-        start = "[";
-        end = "]";
-        const { length } = obj;
-        for (; index < length; index++) {
-          items.push(
-            _stringify(obj[index], nextIndent, index === length - 1 ? 0 : 1) ||
-              "null"
-          );
-        }
-      } else {
-        start = "{";
-        end = "}";
-        const keys = Object.keys(obj);
-        const { length } = keys;
-        for (; index < length; index++) {
-          const key = keys[index];
-          const keyPart = `${JSON.stringify(key)}: `;
-          const value = _stringify(
-            obj[key],
-            nextIndent,
-            keyPart.length + (index === length - 1 ? 0 : 1)
-          );
-          if (value !== undefined) {
-            items.push(keyPart + value);
-          }
-        }
-      }
-
-      if (items.length > 0) {
-        return [start, indent + items.join(`,\n${nextIndent}`), end].join(
-          `\n${currentIndent}`
-        );
-      }
-    }
-
-    return string;
-  })(passedObj, "", 0);
-}
