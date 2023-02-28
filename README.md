@@ -39,7 +39,7 @@ $ python3 steganologger.py --decode --file=plot.png
 
 ## In VSCode
 The extension adds a new tab to the panel. After decoding the image created in the example above by right-clicking on the image in the file explorer and delecting `Decode image`:
-![images/screenshot.png](images/screenshot.png) 
+![images/Screenshot.png](images/Screenshot.png) 
 
 ## Bugs/issues
 - A whole lot. This extension is very much in its testing phase. If you find a bug or have a feature request, let me know: ![https://github.com/juupje/steganologger](https://github.com/juupje/steganologger)
