@@ -1,31 +1,34 @@
 const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
-export function syntaxHighlight(json:string|{}, options:any = {}) {
-    let str = (typeof json === 'string' ? json : stringify(json, options))
-    str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    let highlighted = str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-      var cls = 'number';
-      if (/^"/.test(match)) {
-        if (/:$/.test(match)) {
-          cls = 'key';
-        } else {
-          cls = 'string';
-        }
-      } else if (/true|false/.test(match)) {
-        cls = 'boolean';
-      } else if (/null/.test(match)) {
-        cls = 'null';
+export function syntaxHighlight(str) {
+  str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let highlighted = str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+    var cls = 'number';
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        cls = 'key';
+      } else {
+        cls = 'string';
       }
-      return '<span class="' + cls + '">' + match + '</span>';
-    });
-    return highlighted.replaceAll("\n", "<br/>");
-  }
+    } else if (/true|false/.test(match)) {
+      cls = 'boolean';
+    } else if (/null/.test(match)) {
+      cls = 'null';
+    }
+    return '<span class="' + cls + '">' + match + '</span>';
+  });
+  return highlighted.replaceAll("\n", "<br/>");
+}
+
+export function jsonToString(json, options = {}) {
+  return (typeof json === 'string' ? json : stringify(json, options));
+}
 
 /*
 The code below is taken from the json-stringify-pretty-compact package.
 See https://www.npmjs.com/package/json-stringify-pretty-compact
 */
 
-function stringify(passedObj:{}, options:any = {}) {
+function stringify(passedObj, options={}) {
     const indent = JSON.stringify(
       [1],
       undefined,
@@ -41,7 +44,7 @@ function stringify(passedObj:{}, options:any = {}) {
   
     let { replacer } = options;
   
-    return (function _stringify(obj:any, currentIndent, reserved):string {
+    return (function _stringify(obj, currentIndent, reserved) {
       if (obj && typeof obj.toJSON === "function") {
         obj = obj.toJSON();
       }

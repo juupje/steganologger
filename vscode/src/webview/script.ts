@@ -1,4 +1,4 @@
-import { syntaxHighlight } from "./highlight";
+import { syntaxHighlight, jsonToString } from "./highlight";
 (function() {
   const vscode = acquireVsCodeApi();
   const oldState = vscode.getState() || {tabs: [] as any, current: null, left:0, right:1} as any;
@@ -25,7 +25,7 @@ import { syntaxHighlight } from "./highlight";
           let element = document.getElementById("tab"+current) as HTMLInputElement;
           element.checked = true;
           let div = document.getElementById("tabcontent"+tabs[idx].number) as HTMLDivElement;
-          div.innerHTML = "<pre class='json'>File: "+ message.name + "<br/>" + syntaxHighlight(message.json) + "</pre>";
+          div.innerHTML = "<pre class='json'>File: "+ message.name + "<br/>" + syntaxHighlight(jsonToString(message.json)) + "</pre>";
           tabs[idx].json = message.json
           updateState();
         } else {
@@ -105,7 +105,7 @@ import { syntaxHighlight } from "./highlight";
     if(counter==1) {
       clearPanel();
     }
-    let str = syntaxHighlight(json);
+    let str = syntaxHighlight(jsonToString(json));
     let input = document.createElement("input");
     input.type = "radio";
     input.className = "tabinput";

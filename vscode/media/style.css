@@ -99,3 +99,15 @@ html {
 .dropdown {
     font-weight: normal;
 }
+
+#json_left .deleted, #json_right .created {
+    border: 2px solid #009900;
+}
+
+#json_left .created, #json_right .deleted {
+    border: 2px solid #990000;
+}
+
+.changed {
+    border: 2px solid #eded00;
+}
