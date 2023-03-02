@@ -1,6 +1,7 @@
 const {build} = require("esbuild");
 const baseConfig = {
     bundle: true,
+    loader: { ".node": "file" },
     minify: process.env.NODE_ENV === "production",
     sourcemap: process.env.NODE_ENV !== "production"
 };
@@ -23,8 +24,8 @@ const watchConfig = {
             } else {
                 console.log("[watch] build finished");
             }
-        }
-    }
+        },
+    },
 };
 
 const webviewConfig = {

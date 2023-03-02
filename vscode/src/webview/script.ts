@@ -1,16 +1,32 @@
-import { syntaxHighlight, jsonToString } from "./highlight";
+import { syntaxHighlight, jsonToString, yamlToString, safe_tags } from "./highlight";
 (function() {
+  const version = (document.getElementById("version") as HTMLInputElement).value;
   const vscode = acquireVsCodeApi();
-  const oldState = vscode.getState() || {tabs: [] as any, current: null, left:0, right:1} as any;
+  let oldState = vscode.getState() as any;
+  if(oldState == null || oldState.version !== version) {
+    console.log("No stored state, or it was outdated. Resetting...");
+    oldState = {tabs: [] as any, current: null, left:0, right:1, version:version} as any;
+  }
   
-  var counter = 0;
-  var tabs = oldState.tabs;
-  var current = oldState.current;
-  var left = oldState.left; //these are not changed here
-  var right = oldState.right; //these are not changed here
+  let counter = 0;
+  let tabs = oldState.tabs;
+  let current = oldState.current;
+  const left = oldState.left; //these are not changed here
+  const right = oldState.right; //these are not changed here
 
   for(var i = 0; i < tabs.length; i++) {
-    tabs[i].number = addJSON(tabs[i].json, tabs[i].name);
+    switch(tabs[i].type) {
+      case 'json':
+        tabs[i].number = addTab(syntaxHighlight(jsonToString(tabs[i].json)), tabs[i].name);
+        break;
+      case 'yaml':
+        tabs[i].number = addTab(syntaxHighlight(yamlToString(tabs[i].yaml)), tabs[i].name);
+        break;
+      case 'text':
+      default:
+        tabs[i].number = addTab(tabs[i].text, tabs[i].name);
+        break;
+    }
   }
   updateState(); //to update the tab numbers
 
@@ -25,13 +41,52 @@ import { syntaxHighlight, jsonToString } from "./highlight";
           let element = document.getElementById("tab"+current) as HTMLInputElement;
           element.checked = true;
           let div = document.getElementById("tabcontent"+tabs[idx].number) as HTMLDivElement;
-          div.innerHTML = "<pre class='json'>File: "+ message.name + "<br/>" + syntaxHighlight(jsonToString(message.json)) + "</pre>";
-          tabs[idx].json = message.json
+          div.innerHTML = "<pre class='json'>File: "+ safe_tags(message.name) + "<br/>" + syntaxHighlight(jsonToString(message.json)) + "</pre>";
+          tabs[idx].json = message.json;
           updateState();
         } else {
-          let num = addJSON(message.json, message.name);
+          let content = syntaxHighlight(jsonToString(message.json));
+          let num = addTab(content, message.name);
           current = num;
-          tabs.push({json: message.json, name:message.name, number:num});
+          tabs.push({type: 'json', json: message.json, name:message.name, number:num});
+          updateState();
+        }
+        break;
+      }
+      case 'addYAML': {
+        let idx = checkIfAlreadyAdded(message.name);
+        if(idx >= 0) {
+          //Already in the list
+          current = tabs[idx].number;
+          let element = document.getElementById("tab"+current) as HTMLInputElement;
+          element.checked = true;
+          let div = document.getElementById("tabcontent"+tabs[idx].number) as HTMLDivElement;
+          div.innerHTML = "<pre class='yaml'>File: "+ safe_tags(message.name) + "<br/>" + syntaxHighlight(yamlToString(message.yaml)) + "</pre>";
+          tabs[idx].yaml = message.yaml;
+          updateState();
+        } else {
+          let num = addTab(syntaxHighlight(yamlToString(message.yaml)), message.name);
+          current = num;
+          tabs.push({type: 'yaml', yaml: message.yaml, name:message.name, number:num});
+          updateState();
+        }
+        break;
+      }
+      case 'addText': {
+        let idx = checkIfAlreadyAdded(message.name);
+        if(idx >= 0) {
+          //Already in the list
+          current = tabs[idx].number;
+          let element = document.getElementById("tab"+current) as HTMLInputElement;
+          element.checked = true;
+          let div = document.getElementById("tabcontent"+tabs[idx].number) as HTMLDivElement;
+          div.innerHTML = "<pre class='text'>File: "+ safe_tags(message.name) + "<br/>" + safe_tags(message.text) + "</pre>";
+          tabs[idx].text = message.text;
+          updateState();
+        } else {
+          let num = addTab(safe_tags(message.text), message.name);
+          current = num;
+          tabs.push({type: 'text', text: message.text, name:message.name, number:num});
           updateState();
         }
         break;
@@ -100,12 +155,11 @@ import { syntaxHighlight, jsonToString } from "./highlight";
     }
   });
 
-  function addJSON(json:string|{[key:string]:any}, name:string):number {
+  function addTab(content:string, name:string):number {
     counter += 1;
     if(counter==1) {
       clearPanel();
     }
-    let str = syntaxHighlight(jsonToString(json));
     let input = document.createElement("input");
     input.type = "radio";
     input.className = "tabinput";
@@ -119,11 +173,11 @@ import { syntaxHighlight, jsonToString } from "./highlight";
     let label = document.createElement("label");
     label.id = "label" + counter;
     label.htmlFor = "tab"+counter;
-    label.innerHTML = name.substring(name.lastIndexOf("/")+1);
+    label.innerHTML = safe_tags(name.substring(name.lastIndexOf("/")+1));
     let div = document.createElement("div") as HTMLDivElement;
     div.id = "tabcontent" + counter;
     div.classList.add("tab", "tabcontent");
-    div.innerHTML = "<pre class='json'>File: "+ name + "<br/>" + str + "</pre>";
+    div.innerHTML = "<pre class='json'>File: "+ safe_tags(name) + "<br/>" + content + "</pre>";
     let tabs = document.getElementById("tabcontainer");
     tabs?.appendChild(input);
     tabs?.appendChild(label);
@@ -161,7 +215,7 @@ import { syntaxHighlight, jsonToString } from "./highlight";
   }
 
   function updateState() {
-    vscode.setState({tabs:tabs, current: current, left:left, right:right});
+    vscode.setState({tabs:tabs, current: current, left:left, right:right,version:version});
   }
 
   function clearPanel() {

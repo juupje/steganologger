@@ -3,7 +3,7 @@
   "displayName": "Steganologger",
   "description": "An extension to decode information encoded in plots using the steganologger python script",
   "icon": "media/steganologger-icon-bg.png",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "repository": "https://github.com/juupje/steganologger",
   "publisher": "juupje",
   "license": "SEE LICENSE IN LICENSE",
@@ -122,7 +122,7 @@
     "vscode:prepublish": "npm run package",
     "compile": "node ./esbuild.js",
     "package": "NODE_ENV=production node ./esbuild.js",
-    "watch": "tsc -watch -p ./",
+    "watch": "node ./esbuild.js --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
@@ -144,7 +144,9 @@
   },
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^1.2.1",
+    "js-yaml": "^4.1.0",
     "npm": "^9.5.0",
+    "pdfjs-dist": "^3.4.120",
     "png-js": "^1.0.0"
   }
 }

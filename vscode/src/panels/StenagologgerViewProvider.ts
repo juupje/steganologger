@@ -48,6 +48,20 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 		}
 	}
 
+	public addYAML(docs:{}[], name:string) {
+		if(this._view) {
+			this._view.show?.(true);
+			this._view.webview.postMessage({type: 'addYAML', yaml: docs, name: name});
+		}		
+	}
+
+	public addText(text:string, name:string) {
+		if(this._view) {
+			this._view.show?.(true);
+			this._view.webview.postMessage({type: 'addText', text: text, name: name});
+		}
+	}
+
 	public command(command:string) {
 		if(this._view) {
 			this._view.show?.(true);
@@ -66,6 +80,7 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 	private _getHTMLForWebview(webview: vscode.Webview) {
 		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media','style.css'));
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'out', this._compareModeActive ? 'webview-compare.js' : 'webview.js'));
+		const version = this._context.extension.packageJSON["version"];
 		const nonce = getNonce();
 		if(this._compareModeActive) {
 			return `<!DOCTYPE html>
@@ -78,6 +93,7 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 					<title>Steganologger</title>
 				</head>
 				<body>
+					<input type='hidden' id='version' value='${version}'>
 					<div class='container'><p id='button_p'><vscode-button id='comparebtn'>Compare!</vscode-button></p>
 						<table id='compare_table'>
 							<tr><th><p>File:</p><vscode-dropdown name='dd_left' class='dropdown' id='dropdown_left'></vscode-dropdown></th>
@@ -100,6 +116,7 @@ export class SteganologgerViewProvider implements vscode.WebviewViewProvider {
 					<title>Steganologger</title>
 				</head>
 				<body>
+					<input type='hidden' id='version' value='${version}'>
 					<div class="tabs container" id="tabcontainer">
 						<pre id='json'>Nothing here yet.</pre>
 					</div>

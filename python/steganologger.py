@@ -2,12 +2,16 @@ from PIL import Image
 import json
 import os,sys
 import argparse
-CHECKKEY = "01010110"
-
-def _modify_pixels(pix, data):
+CHECKKEYV1 = "01010110" #V1
+CHECKKEYV2 = "01010111" #V2
+SVG_KEY = "STEGANOLOGGER ENCODED DATA"
+PDF_KEY = "/STEGANOLOGGER"
+VERSION = 2
+ENCODINGS = {"json": 1, "yaml": 2, "text": 3}
+def _modify_pixels(pix, data, datatype):
  
     datalist = [f"{ord(x):08b}" for x in data]
-    datalist = [CHECKKEY] + datalist
+    datalist = [CHECKKEYV2,f"{VERSION:08b}", f"{ENCODINGS.get(datatype,0):08b}"] + datalist
     lendata = len(datalist)
     imdata = iter(pix)
  
@@ -30,30 +34,71 @@ def _modify_pixels(pix, data):
         yield pix[3:6]
         yield pix[6:9]
 
-def _encode_img(newimg, data):
-    w = newimg.size[0]
+def image_encode(file:str, data:str, datatype:str,to_file:str):
+    from PIL import Image
+    img = Image.open(file)
+    img_copy = img.copy()
+    img.close()
+    w = img_copy.size[0]
     (x, y) = (0, 0)
     count = 0
-    for pixel in _modify_pixels(newimg.getdata(), data):
- 
+    for pixel in _modify_pixels(img_copy.getdata(), data, datatype):
         # Putting modified pixels in the new image
-        newimg.putpixel((x, y), pixel)
+        img_copy.putpixel((x, y), pixel)
         count += 1
         if (x == w - 1):
             x = 0
             y += 1
         else:
             x += 1
-    print(f"Encoded {(count//3)} bytes in {count} pixels ({count/(newimg.size[0]*newimg.size[1])*100:.2f}% of image)")
+    print(f"Encoded {(count//3)} bytes in {count} pixels ({count/(img_copy.size[0]*img_copy.size[1])*100:.2f}% of image)")
 
-def encode(image_path:str, data:dict|str, overwrite:bool=False, to_file:str=None) -> bool:
+    img_copy.save(to_file, "PNG")
+
+def pdf_encode(file:str, data:str, datatype:str,to_file:str):
+    from PyPDF2 import PdfFileReader, PdfFileMerger
+    file_in = open(file, 'rb')
+    pdf_reader = PdfFileReader(file_in)
+    metadata = pdf_reader.getDocumentInfo()
+    print(metadata)
+
+    pdf_merger = PdfFileMerger()
+    pdf_merger.append(file_in)
+    pdf_merger.addMetadata({
+        PDF_KEY: json.dumps({"datatype": datatype, "version": VERSION, "data": data})
+    })
+    file_out = open(to_file, 'wb')
+    pdf_merger.write(file_out)
+    print("Encoded data successfully into PDF metadata!")
+    file_in.close()
+    file_out.close()
+
+def svg_encode(file:str, data:str, datatype:str, to_file:str):
+    if(file == to_file):
+        out_file = open(file, 'a')
+    else:
+        out_file = open(to_file, 'w')
+        with open(file, 'r') as f:
+            for line in f:
+                out_file.write(line)
+    out_file.write("<!-- " + SVG_KEY + "\n")
+    out_file.write(json.dumps({"data": data, "datatype": datatype, "version": VERSION}, indent=2) + "\n")
+    out_file.write(SVG_KEY +" -->\n")
+    print("Encoded data successfully as SVG comment!")
+    out_file.close()
+
+def encode(file_path:str, data:dict|str, datatype:str=None,overwrite:bool=False, to_file:str=None) -> bool:
     """
     Parameters
     ----------
-    image_path: str,
+    file_path: str,
         Path of the image in which to encode the data
     data: dict,
         The dictionary to encode
+    datatype: str,
+        One of 'json', 'yaml', 'text'. This specifies the type of data you are trying to encode.
+        If not given, the encoder will automatically check if it happens to be json. Otherwise, the type will be 'text'.
+        This has no influence on how the data is encoded, but might be helpful for the decoder.
     overwrite: bool,
         If `True`, overwrite the original file with the encoded file. 
         f the original file did not have the .png extension, it is added automatically
@@ -63,37 +108,62 @@ def encode(image_path:str, data:dict|str, overwrite:bool=False, to_file:str=None
         the original image's name.
     """
     try:
+        print("STEGANOLOGGER: encoding...")
         if(type(data) is dict):
             data = json.dumps(data, ensure_ascii=True)
+            datatype = 'json'
         if(type(data) is not str):
             ValueError("Cannot encode this type of data")
-        if(not os.path.isfile(image_path)):
+
+        #if the datatype is none try to find out what it is
+        if(datatype is None):
+            try:
+                json.loads(data)
+                datatype = 'json'
+                print("Determined that datatype is json")
+            except json.JSONDecodeError as e:
+                print("Could not auto-determine datatype, going with 'text'")
+                datatype = 'text'
+
+        if(not os.path.isfile(file_path)):
             print("Given image file does not exist.", file=sys.stderr)
-        img = Image.open(image_path)
-        img_copy = img.copy()
-        img.close()
-        _encode_img(img_copy, data)
+        ext = os.path.splitext(file_path)[1].lower()
 
         if(overwrite):
-            img_copy.save(os.path.splitext(image_path)[0], "PNG")
+            to_file = file_path
         else:
             if(to_file is not None):
-                if(not to_file.lower().endswith(".png")):
-                    to_file += ".png"
-                img_copy.save(to_file, "PNG")
+                if(os.path.splitext(to_file)[1] != ext):
+                    to_file += ext
             else:
-                img_copy.save(os.path.splitext(image_path)[0]+"-encoded.png", "PNG")
+                to_file = os.path.splitext(file_path)[0]+"-encoded" + ext
+        
+        if(ext == ".png"):
+            image_encode(file_path, data, datatype, to_file)
+        elif(ext == ".pdf"):
+            pdf_encode(file_path, data, datatype, to_file)
+        elif(ext == ".svg"):
+            svg_encode(file_path, data, datatype, to_file)
+            pass
+        else:
+            print("Extension " + ext + " is not supported.")
+        print("Done!\n")
     except Exception as e:
-        print("Something went wrong, could not encode image!", file=sys.stderr)
+        print("Something went wrong, could not encode data!", file=sys.stderr)
         print(e)
 
-def _decode_pixels(pixels):
-    # string of binary data
-    assert len(pixels)==9
-    binstr = ''.join(str(i%2) for i in pixels)
-    return binstr
+def png_decode(image_path):
+    def _decode_pixels(pixels):
+        # string of binary data
+        assert len(pixels)==9
+        binstr = ''.join(str(i%2) for i in pixels)
+        return binstr
 
-def decode(image_path):
+    def getbyte():
+        return [value for value in imgdata.__next__()[:3] +
+                                imgdata.__next__()[:3] +
+                                imgdata.__next__()[:3]]
+
     if(not os.path.isfile(image_path)):
         print("No such file")
         exit()
@@ -101,18 +171,60 @@ def decode(image_path):
  
     data = ''
     imgdata = iter(image.getdata())
-    pixels = [value for value in imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3]]
-    binstr = _decode_pixels(pixels)
-    assert binstr[:8] == CHECKKEY, "Check key does not match: no encoded data found. Got: " + binstr[:8]
+    binstr = _decode_pixels(getbyte())
+    version = 1
+    type_str = None
+    if(binstr[:8] == CHECKKEYV2):
+        # got version >2
+        version = int(_decode_pixels(getbyte())[:8],2)
+        type_id = int(_decode_pixels(getbyte())[:8],2)
+        for key, value in ENCODINGS.items():
+            if(value==type_id):
+                type_str = key
+    elif(binstr[:8] == CHECKKEYV1):
+        type_id = None
+    else:
+        print("Check key does not match: no encoded data found. Got: " + binstr[:8])
+        exit()
+
     while (binstr[-1]=='0'):
-        pixels = [value for value in imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3] +
-                                imgdata.__next__()[:3]]
-        binstr = _decode_pixels(pixels)
+        binstr = _decode_pixels(getbyte())
         data += chr(int(binstr[:8],2))
-    return data
+    return data, version, type_str
+
+def pdf_decode(pdf_path):
+    from PyPDF2 import PdfFileReader
+    with open(pdf_path, 'rb') as file:
+        pdf_reader = PdfFileReader(file)
+        metadata = pdf_reader.getDocumentInfo()
+        
+        if(PDF_KEY in metadata):
+            doc = json.loads(metadata["/EncodedInfo"])
+            return doc["data"], doc["version"], doc["datatype"]
+        else:
+            print("No encoded data found!")
+            exit()
+
+def svg_decode(svg_path):
+    import re
+    start = re.compile(r"<!--\s*"+SVG_KEY+r"\s*$")
+    end = re.compile(SVG_KEY + r"\s*-->$")
+    with open (svg_path, 'r') as f:
+        reading = False
+        lines = ""
+        for line in f:
+            if(reading):
+                if(end.match(line)):
+                    break
+                lines += line
+            if(start.match(line)):
+                reading = True
+        if(len(lines)>0):
+            doc = json.loads(lines)
+            return doc["data"], doc["version"], doc["datatype"]
+        else:
+            print("No encoded information found")
+            exit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Stenagologger')
@@ -147,22 +259,53 @@ if __name__ == "__main__":
         encode(args["file"], data, overwrite=False, to_file=args["out_file"])
     elif(args["decode"]):
         pretty = args["pretty"]
-        s = decode(args["file"])
-        try:
-            s = json.loads(s)
-        except json.JSONDecodeError as e:
-            print(e)
-            print("Could not interpret decoded text as json")
+        ext = os.path.splitext(args["file"])[1]
+        if(ext == ".png"):
+            data, version, type_id = png_decode(args["file"])
+        elif(ext == ".pdf"):
+            data, version, type_id = pdf_decode(args["file"])
+        elif(ext == ".svg"):
+            data, version, type_id = svg_decode(args["file"])
+        else:
+            print("Extension " + ext + " is not supported.")
+
+        if(type_id == 'json'):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                print(e)
+                print("Found type 'json', but could not interpret decoded text as json")
+                type_id = 'text'
+        elif(type_id == 'yaml'):
+            import yaml
+            try:
+                data = yaml.safe_load(data)
+            except Exception as e:
+                print(e)
+                print("Found type 'yaml', but could not interpret decoded text as yaml")
+                type_id = 'text'
+        elif(type_id is None):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                print("Failed to interpret data as json")
+                type_id = 'text'
+        
+        print("Parsing data as " + type_id)
         if("out_file" in args and args["out_file"]):
             with open(args["out_file"], 'w') as f:
-                if(type(s) is dict):
-                    json.dump(s,f, indent=2 if pretty else None)
+                if(type_id=='json'):
+                    json.dump(data,f, indent=2 if pretty else None)
+                elif(type_id=='yaml'):
+                    yaml.dump(data,f,indent=2)
                 else:
-                    f.write(s)
+                    f.write(data)
         else:
-            if(type(s) is dict):
-                print(json.dumps(s, indent=2 if pretty else None))
+            if(type_id=='json'):
+                print(json.dumps(data, indent=2 if pretty else None))
+            elif(type_id=='yaml'):
+                print(yaml.dump(data,indent=2))
             else:
-                print(s)
+                print(data)
     else:
         print("Nothing to do")

@@ -6,7 +6,7 @@ pre {
 .string { color: rgb(253, 123, 1); }
 .number { color: rgb(159, 203, 0); }
 .boolean { color: rgb(94, 94, 255); }
-.null { color: rgb(112, 0, 127); }
+.null { color: rgb(179, 2, 203); }
 .key { color: rgb(0, 255, 251); }
 
 .container {

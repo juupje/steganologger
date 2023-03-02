@@ -1,26 +1,43 @@
 import { provideVSCodeDesignSystem, vsCodeDropdown, vsCodeOption, vsCodeButton } from "@vscode/webview-ui-toolkit";
 import { colorDifferences } from "./diff";
+import { safe_tags } from "./highlight";
+
 
 provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeOption(), vsCodeButton());
 
 (function() {
+  const version = (document.getElementById("version") as HTMLInputElement).value;
   const vscode = acquireVsCodeApi();
-  const oldState = vscode.getState() || {tabs: [] as any, current: null, left: 0, right:1} as any;
+  let oldState = vscode.getState() as any;
+  if(oldState == null || oldState.version !== version) {
+    console.log("No stored state, or it was outdated. Resetting...");
+    oldState = {tabs: [] as any, current: null, left:0, right:1, version:version} as any;
+  }
 
-  let tabs = oldState.tabs; // this is not changed here
-  let current = oldState.current; // this is not changed here
+  const tabs_unfiltered = oldState.tabs; // this is not changed here
+  const current = oldState.current; // this is not changed here
   let left = oldState.left || 0;
   let right = oldState.right || 1;
 
+  let tabs:any[] = [];
+  for(let i = 0; i < tabs_unfiltered.length; i++) {
+    if(tabs_unfiltered[i].type=='json') {
+      tabs.push(tabs_unfiltered[i]);
+    }
+  }
+
   if(tabs.length<2) {
     (document.getElementById("file_left") as HTMLTableCellElement).innerHTML = "Not enough files to compare.";
-    return;
-  }
-  if(left > tabs.length) {
-    left = tabs.length-1;
-  }
-  if(right > tabs.length) {
-    right = tabs.length-2;
+    if(tabs.length==0) {return;}
+    left = 0;
+    right = 0;
+  } else {
+    if(left > tabs.length) {
+      left = tabs.length-1;
+    }
+    if(right > tabs.length) {
+      right = tabs.length-2;
+    }
   }
 
   (document.getElementById("comparebtn") as HTMLButtonElement).onclick = compare;
@@ -28,10 +45,11 @@ provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeOption(), vsCodeBut
   let dd1 = document.getElementById("dropdown_left") as HTMLSelectElement;
   let dd2 = document.getElementById("dropdown_right") as HTMLSelectElement;
   for(let i = 0; i < tabs.length; i++) {
+    if(tabs[i].type !== 'json') { continue; }
     let option = document.createElement("vscode-option") as HTMLInputElement;
     let name = tabs[i].name;
     option.value = "" + i;
-    option.innerHTML = name.substring(name.lastIndexOf("/")+1);
+    option.innerHTML = safe_tags(name.substring(name.lastIndexOf("/")+1));
     option.title = name;
     let option2 = option.cloneNode(true) as HTMLInputElement;
     dd1?.appendChild(option);
@@ -44,7 +62,7 @@ provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeOption(), vsCodeBut
   },100);
 
   function updateState() {
-    vscode.setState({tabs:tabs, current: current, left:left, right:right});
+    vscode.setState({tabs:tabs_unfiltered, current: current, left:left, right:right, version:version});
   }
   
   function compare() {
@@ -67,13 +85,13 @@ provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeOption(), vsCodeBut
     }
     let lefttitle = document.getElementById("file_left") as HTMLElement;
     let righttitle = document.getElementById("file_right") as HTMLElement;
-    lefttitle.innerHTML = "<pre class='json'>" + tabs[left].name + "</pre>";
-    righttitle.innerHTML = "<pre class='json'>" + tabs[right].name + "</pre>";
+    lefttitle.innerHTML = "<pre class='json'>" + safe_tags(tabs[left].name) + "</pre>";
+    righttitle.innerHTML = "<pre class='json'>" + safe_tags(tabs[right].name) + "</pre>";
 
     let leftjson = document.getElementById("json_left") as HTMLElement;
     let rightjson = document.getElementById("json_right") as HTMLElement;
 
-    const differences = colorDifferences(jl, jr);
+    const differences = colorDifferences(jl, jr); //does the syntax highlight too
 
     leftjson.innerHTML = "<pre class='json'>" + differences[0] + "</pre>";
     rightjson.innerHTML = "<pre class='json'>" + differences[1] + "</pre>";

@@ -2,10 +2,10 @@
 // Import the module and reference it with the alias vscode in your code below
 import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
-const PNG = require('png-js');
-const fs = require('fs');
+const YAML = require('js-yaml');
+
 import { SteganologgerViewProvider } from './panels/StenagologgerViewProvider';
-import { PNGDecoder } from './utils/decoder';
+import { PDFDecoder, PNGDecoder, SVGDecoder } from './utils/decoder';
 
 type Binary<N extends number = number> = string & {
 	readonly binaryStringLength: unique symbol;
@@ -20,8 +20,34 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	let logger = vscode.window.createOutputChannel("Steganologger");
 
-	const decoder = new PNGDecoder(logger);
 	const provider = new SteganologgerViewProvider(context.extensionUri, logger, context);
+
+	function showDecoded(decoded:any, path:string) {
+		logger.appendLine("Decoded: " + JSON.stringify(decoded));
+		switch(decoded.type) {
+			case 'json':
+				provider.addJSON(JSON.parse(decoded.data), path);
+				break;
+			case 'yaml':
+				let docs:{}[] = [];
+				YAML.loadAll(decoded.data, function(doc:any) {
+					docs.push(doc);
+				});
+				provider.addYAML(docs, path);
+				break;
+			case 'other':
+				try {
+					let json = JSON.parse(decoded.data);
+					provider.addJSON(json, path);
+					break;
+				} catch (error) {
+					console.log("Could not interpret as JSON, interpreting as text");
+				}
+			case 'text':
+				provider.addText(decoded.data, path)
+				break;
+		}
+	}
 
 	let showInfoCommand = vscode.commands.registerCommand("steganologger.showInfo", async (uri: vscode.Uri) => {
 		try {
@@ -32,12 +58,24 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		let path = uri.fsPath;
 		logger.appendLine("Decoding from URI: " + uri.toString());
-		PNG.decode(path, (pixels:number[]) => {
-			let decoded = decoder.decodePNG(pixels);
-			logger.appendLine("Decoded: " + decoded);
-			let json = JSON.parse(decoded);
-			provider.addJSON(json, path);
-		});
+		let ext = uri.toString().substring(uri.toString().lastIndexOf(".")+1).toLowerCase()
+		logger.appendLine(ext);
+		if(ext == "png") {
+			const decoder = new PNGDecoder(logger);
+			decoder.decodePNG(path,(decoded:any) => {
+				showDecoded(decoded,path);
+			});
+		} else if(ext == "pdf") {
+			const decoder = new PDFDecoder(logger);
+			decoder.decodePDF(path, (decoded:any) => {
+				showDecoded(decoded, path);
+			});
+		} else if(ext == "svg") {
+			const decoder = new SVGDecoder(logger);
+			decoder.decodeSVG(path, (decoded:any) => {
+				showDecoded(decoded,path);
+			});
+		}
 	});
 
 	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.command("clear"));
@@ -48,7 +86,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand, compareCommand, refreshTabCommand, refreshAllCommand);
 
-	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png']);
+	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png', '.svg', '.pdf']);
 
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider(SteganologgerViewProvider.viewType, provider));
 }

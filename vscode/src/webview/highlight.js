@@ -1,7 +1,9 @@
+const YAML = require('js-yaml');
+
 const stringOrChar = /("(?:[^\\"]|\\.)*")|[:,]/g;
 export function syntaxHighlight(str) {
-  str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let highlighted = str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+  str = safe_tags(str);
+  let highlighted = str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|'(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\'])*'(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
     var cls = 'number';
     if (/^"/.test(match)) {
       if (/:$/.test(match)) {
@@ -9,6 +11,8 @@ export function syntaxHighlight(str) {
       } else {
         cls = 'string';
       }
+    } else if (/^'/.test(match)) {
+      cls = 'string';
     } else if (/true|false/.test(match)) {
       cls = 'boolean';
     } else if (/null/.test(match)) {
@@ -21,6 +25,14 @@ export function syntaxHighlight(str) {
 
 export function jsonToString(json, options = {}) {
   return (typeof json === 'string' ? json : stringify(json, options));
+}
+
+export function yamlToString(docs, options = {}) {
+  return (typeof docs === 'string' ? docs : YAML.dump(docs, options));
+}
+
+export function safe_tags(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') ;
 }
 
 /*
