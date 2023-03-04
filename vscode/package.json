@@ -3,7 +3,7 @@
   "displayName": "Steganologger",
   "description": "An extension to decode information encoded in plots using the steganologger python script",
   "icon": "media/steganologger-icon-bg.png",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "repository": "https://github.com/juupje/steganologger",
   "publisher": "juupje",
   "license": "SEE LICENSE IN LICENSE",
@@ -146,7 +146,6 @@
     "@vscode/webview-ui-toolkit": "^1.2.1",
     "js-yaml": "^4.1.0",
     "npm": "^9.5.0",
-    "pdfjs-dist": "^3.4.120",
     "png-js": "^1.0.0"
   }
 }

@@ -1,16 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
 const YAML = require('js-yaml');
 
 import { SteganologgerViewProvider } from './panels/StenagologgerViewProvider';
 import { PDFDecoder, PNGDecoder, SVGDecoder } from './utils/decoder';
-
-type Binary<N extends number = number> = string & {
-	readonly binaryStringLength: unique symbol;
-	length: N;
-};
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -78,12 +72,13 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	
 	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.command("clear"));
 	let removeTabCommand = vscode.commands.registerCommand("steganologger.removeTab", async () => provider.command("removeTab"));
 	let compareCommand = vscode.commands.registerCommand("steganologger.toggleCompare", async() => provider.toggleCompare());
 	let refreshTabCommand = vscode.commands.registerCommand("steganologger.refreshTab", async() => provider.command("refreshTab"));
 	let refreshAllCommand = vscode.commands.registerCommand("steganologger.refreshAll", async() => provider.command("refreshAll"));
-
+	
 	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand, compareCommand, refreshTabCommand, refreshAllCommand);
 
 	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png', '.svg', '.pdf']);

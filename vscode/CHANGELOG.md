@@ -2,6 +2,10 @@
 
 All notable changes to the "steganologger" extension will be documented in this file.
 
+## [v0.2.2]
+- Removed unused libraries
+- Minor bug fix
+
 ## [v0.2.0]
 - Added support for YAML and plain-text data (not supported in comparison-mode)
 - Added support for encoding/decoding PDFs and SVGs.

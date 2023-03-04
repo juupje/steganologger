@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 const PNG = require('png-js');
 const fs = require('node:fs');
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 export class PNGDecoder {
     constructor(
