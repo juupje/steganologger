@@ -2,6 +2,12 @@
 
 All notable changes to the "steganologger" extension will be documented in this file.
 
+## [v0.2.4]
+- Added support for different JSON datatypes back into compare mode.
+
+## [v0.2.3]
+- Fixed the issue of compare mode not working properly when a value in the left JSON has a different datatype than the corresponding value in the right JSON by removing support for different datatypes.
+
 ## [v0.2.2]
 - Removed unused libraries
 - Minor bug fix

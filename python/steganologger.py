@@ -8,6 +8,22 @@ SVG_KEY = "STEGANOLOGGER ENCODED DATA"
 PDF_KEY = "/STEGANOLOGGER"
 VERSION = 2
 ENCODINGS = {"json": 1, "yaml": 2, "text": 3}
+
+try:
+    import numpy
+    class Encoder(json.JSONEncoder):
+        def default(self,obj):
+            if isinstance(obj,numpy.integer):
+                return int(obj)
+            elif isinstance(obj, numpy.floating):
+                return float(obj)
+            elif isinstance(obj, numpy.ndarray):
+                return obj.tolist()
+            else:
+                return super(Encoder, self).default(obj)
+except:
+    Encoder = json.JSONEncoder
+
 def _modify_pixels(pix, data, datatype):
  
     datalist = [f"{ord(x):08b}" for x in data]
@@ -110,7 +126,7 @@ def encode(file_path:str, data:dict|str, datatype:str=None,overwrite:bool=False,
     try:
         print("STEGANOLOGGER: encoding...")
         if(type(data) is dict):
-            data = json.dumps(data, ensure_ascii=True)
+            data = json.dumps(data, ensure_ascii=True, cls=Encoder)
             datatype = 'json'
         if(type(data) is not str):
             ValueError("Cannot encode this type of data")

@@ -3,7 +3,7 @@
   "displayName": "Steganologger",
   "description": "An extension to decode information encoded in plots using the steganologger python script",
   "icon": "media/steganologger-icon-bg.png",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "repository": "https://github.com/juupje/steganologger",
   "publisher": "juupje",
   "license": "SEE LICENSE IN LICENSE",

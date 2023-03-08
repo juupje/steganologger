@@ -91,11 +91,11 @@ provideVSCodeDesignSystem().register(vsCodeDropdown(), vsCodeOption(), vsCodeBut
     let leftjson = document.getElementById("json_left") as HTMLElement;
     let rightjson = document.getElementById("json_right") as HTMLElement;
 
-    const differences = colorDifferences(jl, jr); //does the syntax highlight too
-
-    leftjson.innerHTML = "<pre class='json'>" + differences[0] + "</pre>";
-    rightjson.innerHTML = "<pre class='json'>" + differences[1] + "</pre>";
-
+    const differences = colorDifferences(jl, jr, vscode); //does the syntax highlight too
+    if(differences != null) {
+      leftjson.innerHTML = "<pre class='json'>" + differences[0] + "</pre>";
+      rightjson.innerHTML = "<pre class='json'>" + differences[1] + "</pre>";
+    }
     updateState();
   }
 
