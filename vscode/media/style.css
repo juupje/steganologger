@@ -106,6 +106,7 @@ html {
 
 #json_left .created, #json_right .deleted {
     border: 2px solid #990000;
+    display:none;
 }
 
 .changed {
