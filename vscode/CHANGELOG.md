@@ -2,6 +2,12 @@
 
 All notable changes to the "steganologger" extension will be documented in this file.
 
+## [v0.2.6]
+No changes. The `preview` tag has been removed from the extension.
+
+## [v0.2.5]
+- Changed the style of the compare mode: deleted keys are now invisble to remove clutter.
+
 ## [v0.2.4]
 - Added support for different JSON datatypes back into compare mode.
 

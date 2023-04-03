@@ -1,6 +1,6 @@
 # steganologger
 A VSCode extension/python script duo to encode and decode data in plots.
-NOTE: Somehow, this extension does not work on remote systems if you install from the Marketplace on the remote. Use the .vsix package from the release on GitHub to install the extension on remote systems manually.
+NOTE: Somehow, this extension does not always work on remote systems if you install from the Marketplace on the remote. You can install the .vsix package from the release on GitHub to install the extension on remote systems manually.
 
 ## Usage
 ### Decoding
@@ -68,4 +68,5 @@ Search for 'Steganologger' in the VSCode Marketplace and install it. Note: DO NO
 
 ## Known bugs/issues
 - Extension does not work when installing from the VSCode Marketplace on remote systems. Fix: install manually (see above)
-This extension is very much in its testing phase, so the probability of it being bug-free is low. If you find a bug or have a feature request, let me know: ![https://github.com/juupje/steganologger](https://github.com/juupje/steganologger)
+
+This extension has been tested to a reasonable extent, but more bugs are likely to exist. If you find a bug or have a feature request, let me know: ![https://github.com/juupje/steganologger](https://github.com/juupje/steganologger)
