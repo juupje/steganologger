@@ -24,6 +24,10 @@ try:
 except:
     Encoder = json.JSONEncoder
 
+def _convert_nans_and_infs(encoded_json):
+    encoded_json = re.sub(r":\sInfinity,", ": \"Infinity\",", encoded_json)
+    return re.sub(r":\sNaN,", ": \"NaN\",", encoded_json)
+
 def _modify_pixels(pix, data, datatype):
  
     datalist = [f"{ord(x):08b}" for x in data]
@@ -127,6 +131,7 @@ def encode(file_path:str, data:dict|str, datatype:str=None,overwrite:bool=False,
         print("STEGANOLOGGER: encoding...")
         if(type(data) is dict):
             data = json.dumps(data, ensure_ascii=True, cls=Encoder)
+            data = _convert_nans_and_infs(data)
             datatype = 'json'
         if(type(data) is not str):
             ValueError("Cannot encode this type of data")
