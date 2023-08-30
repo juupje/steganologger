@@ -2,6 +2,9 @@
 
 All notable changes to the "steganologger" extension will be documented in this file.
 
+## [v0.3.0]
+- Added support for PGF files
+
 ## [v0.2.6]
 No changes. The `preview` tag has been removed from the extension.
 

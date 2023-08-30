@@ -104,7 +104,6 @@ export class SVGDecoder {
         let reading = false;
         let lines = svg.split("\n");
         let json = "";
-        this._logger.appendLine("test " + lines.length);
         for(let i = 0; i < lines.length; i++) {
             if(reading) {
                 this._logger.appendLine(lines[i]);
@@ -125,6 +124,45 @@ export class SVGDecoder {
             func(result);
         } else {
             vscode.window.showInformationMessage("There is no information encoded in this svg file.");
+            return;
+        }
+    }
+}
+
+export class PGFDecoder {
+    private static readonly KEY = "STEGANOLOGGER ENCODED DATA";
+    constructor(
+        private readonly _logger:vscode.OutputChannel
+    ) {}
+
+    public decodePGF(path:string, func:Function) {
+        this._logger.appendLine("Decoding pgf");
+        const pgf = fs.readFileSync(path, {encoding:'utf8'});
+        const start = new RegExp("\\s*"+PGFDecoder.KEY+"\\sSTART\\s*$");
+        const end = new RegExp("\\s*"+PGFDecoder.KEY+"\\sEND\\s*$");
+        let reading = false;
+        let lines = pgf.split("\n%%");
+        let json = "";
+        for(let i = 0; i < lines.length; i++) {
+            if(reading) {
+                if(end.test(lines[i])) { break; }
+                this._logger.appendLine(lines[i]);
+                json += lines[i];
+            }
+            if(start.test(lines[i])) { reading = true; }
+        }
+        if(reading) {
+            let result = null;
+            try {
+                const decoded = JSON.parse(json);
+                result = {data:decoded.data, type:decoded.datatype, version:decoded.version};
+            } catch {
+                vscode.window.showErrorMessage("Found encoded information, but could not decode it. Interpreting it as text");
+                result = {data: json, datatype: 'text', version: 2};
+            }
+            func(result);
+        } else {
+            vscode.window.showInformationMessage("There is no information encoded in this pgf file.");
             return;
         }
     }

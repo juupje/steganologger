@@ -25,6 +25,7 @@ except:
     Encoder = json.JSONEncoder
 
 def _convert_nans_and_infs(encoded_json):
+    import re
     encoded_json = re.sub(r":\sInfinity,", ": \"Infinity\",", encoded_json)
     return re.sub(r":\sNaN,", ": \"NaN\",", encoded_json)
 
@@ -54,7 +55,9 @@ def _modify_pixels(pix, data, datatype):
         yield pix[3:6]
         yield pix[6:9]
 
-def image_encode(file:str, data:str, datatype:str,to_file:str):
+def image_encode(file:str, data:str|dict, datatype:str,to_file:str):
+    if(type(data) is dict):
+        data = json.dumps(data, ensure_ascii=True, cls=Encoder)
     from PIL import Image
     img = Image.open(file)
     img_copy = img.copy()
@@ -75,7 +78,21 @@ def image_encode(file:str, data:str, datatype:str,to_file:str):
 
     img_copy.save(to_file, "PNG")
 
-def pdf_encode(file:str, data:str, datatype:str,to_file:str):
+def pgf_encode(file:str, data:str|dict, datatype:str,to_file:str):
+    if(file == to_file):
+        out_file = open(file, 'a')
+    else:
+        out_file = open(to_file, 'w')
+        with open(file, 'r') as f:
+            for line in f:
+                out_file.write(line)
+    out_file.write("%% " + SVG_KEY + " START\n")
+    out_file.write("%% "+json.dumps({"data": data, "datatype": datatype, "version": VERSION}, indent=2).replace("\n", "\n%%") + "\n")
+    out_file.write("%% "+ SVG_KEY + " END\n")
+    print("Encoded data successfully as PGF comment!")
+    out_file.close()
+
+def pdf_encode(file:str, data:str|dict, datatype:str,to_file:str):
     from PyPDF2 import PdfFileReader, PdfFileMerger
     file_in = open(file, 'rb')
     pdf_reader = PdfFileReader(file_in)
@@ -93,7 +110,7 @@ def pdf_encode(file:str, data:str, datatype:str,to_file:str):
     file_in.close()
     file_out.close()
 
-def svg_encode(file:str, data:str, datatype:str, to_file:str):
+def svg_encode(file:str, data:str|dict, datatype:str, to_file:str):
     if(file == to_file):
         out_file = open(file, 'a')
     else:
@@ -165,7 +182,8 @@ def encode(file_path:str, data:dict|str, datatype:str=None,overwrite:bool=False,
             pdf_encode(file_path, data, datatype, to_file)
         elif(ext == ".svg"):
             svg_encode(file_path, data, datatype, to_file)
-            pass
+        elif(ext == ".pgf"):
+            pgf_encode(file_path, data, datatype, to_file)
         else:
             print("Extension " + ext + " is not supported.")
         print("Done!\n")
@@ -212,6 +230,27 @@ def png_decode(image_path):
         binstr = _decode_pixels(getbyte())
         data += chr(int(binstr[:8],2))
     return data, version, type_str
+
+def pgf_decode(svg_path):
+    import re
+    start = re.compile(r"%%\s*"+SVG_KEY+r"\sSTART\s*$")
+    end = re.compile(r"%%\s*"+SVG_KEY+r"\sEND\s*$")
+    with open (svg_path, 'r') as f:
+        reading = False
+        lines = ""
+        for line in f:
+            if(reading):
+                if(end.match(line)):
+                    break
+                lines += line[2:] #remove the %%
+            if(start.match(line)):
+                reading = True
+        if(len(lines)>0):
+            doc = json.loads(lines)
+            return doc["data"], doc["version"], doc["datatype"]
+        else:
+            print("No encoded information found")
+            exit()
 
 def pdf_decode(pdf_path):
     from PyPDF2 import PdfFileReader

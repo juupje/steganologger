@@ -4,7 +4,8 @@ import * as vscode from 'vscode';
 const YAML = require('js-yaml');
 
 import { SteganologgerViewProvider } from './panels/StenagologgerViewProvider';
-import { PDFDecoder, PNGDecoder, SVGDecoder } from './utils/decoder';
+import { PDFDecoder, PNGDecoder, SVGDecoder, PGFDecoder } from './utils/decoder';
+import { text } from 'stream/consumers';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -69,10 +70,24 @@ export function activate(context: vscode.ExtensionContext) {
 			decoder.decodeSVG(path, (decoded:any) => {
 				showDecoded(decoded,path);
 			});
+		} else if(ext == "pgf") {
+			const decoder = new PGFDecoder(logger);
+			decoder.decodePGF(path, (decoded:any) => {
+				showDecoded(decoded,path);
+			});
 		}
 	});
 
-	
+	/*const onDidChangeActiveTextEditor: (textEditor: vscode.TextEditor|undefined) => void = textEditor => {
+		// there is nothing to open
+		if (!textEditor) {
+		  return
+		}
+		vscode.window.showInformationMessage("Opened!" + textEditor.document.uri.fsPath);
+	  }
+	  context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(onDidChangeActiveTextEditor)
+	  )*/
 	let clearCommand = vscode.commands.registerCommand("steganologger.clear", async () => provider.command("clear"));
 	let removeTabCommand = vscode.commands.registerCommand("steganologger.removeTab", async () => provider.command("removeTab"));
 	let compareCommand = vscode.commands.registerCommand("steganologger.toggleCompare", async() => provider.toggleCompare());
@@ -81,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	context.subscriptions.push(showInfoCommand, clearCommand, removeTabCommand, compareCommand, refreshTabCommand, refreshAllCommand);
 
-	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png', '.svg', '.pdf']);
+	vscode.commands.executeCommand('setContext', 'steganologger.supportedExtensions', ['.png', '.svg', '.pdf', '.pgf']);
 
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider(SteganologgerViewProvider.viewType, provider));
 }
